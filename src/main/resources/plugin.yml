@@ -1,0 +1,8 @@
+name: Portals
+version: '${project.version}'
+main: me.zeepic.portals.Main
+api-version: 1.18
+prefix: Portals
+authors: [ ZeEpic ]
+description: This plugin simply allows players to build nether portals in the end dimension.
+website: github.com/ZeEpic
