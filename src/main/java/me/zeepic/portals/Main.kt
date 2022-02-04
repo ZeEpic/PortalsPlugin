@@ -7,7 +7,7 @@ class Main : JavaPlugin() {
 
     override fun onEnable() {
         // Plugin startup logic
-        server.pluginManager.registerEvents(BlockInteractListener(), this)
+        server.pluginManager.registerEvents(BlockInteractListener, this)
 
     }
 

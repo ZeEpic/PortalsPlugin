@@ -1,15 +1,18 @@
 package me.zeepic.portals.listener
 
 import me.zeepic.portals.attemptFindNetherPortal
+import me.zeepic.portals.playSound
 import org.bukkit.Material
+import org.bukkit.Sound
+import org.bukkit.SoundCategory
 import org.bukkit.World
-import org.bukkit.block.Block
-import org.bukkit.block.data.Orientable
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.inventory.meta.Damageable
 
-class BlockInteractListener : Listener {
+object BlockInteractListener : Listener {
 
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
@@ -24,27 +27,31 @@ class BlockInteractListener : Listener {
 
         // When the player attempts to light a portal
         if (hand.type != Material.FLINT_AND_STEEL) return
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
 
         // We are only focused on the end dimension
         if (block.world.environment != World.Environment.THE_END) return
 
+        // Use the utility function to find the bounds of the portal
+        val portal = block.attemptFindNetherPortal() ?: return
+
         // Actually fill in the portal
-        attemptCreatePortal(block)
+        portal.attemptFill()
 
-    }
+        // Effects
+        block.playSound(Sound.ITEM_FLINTANDSTEEL_USE, SoundCategory.PLAYERS)
 
-}
+        // Remove durability
+        val copy = hand.clone()
+        val meta = copy.itemMeta as Damageable
+        meta.damage -= 1
+        copy.itemMeta = meta
 
-private fun attemptCreatePortal(block: Block) {
+        // Set item in player's hand to the copy
+        val inv = event.player.inventory
+        if (hand == inv.itemInMainHand) inv.setItemInMainHand(copy)
+        if (hand == inv.itemInOffHand) inv.setItemInOffHand(copy)
 
-    // Use the utility function to find the bounds
-    val portal = block.attemptFindNetherPortal() ?: return
-
-    // Fill the bounds and orient the portal on the correct axis
-    portal.attemptFill(Material.NETHER_PORTAL) {
-        val data = it as Orientable
-        data.axis = portal.axis
-        data
     }
 
 }

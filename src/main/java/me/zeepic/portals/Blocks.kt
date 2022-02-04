@@ -2,9 +2,11 @@ package me.zeepic.portals
 
 import org.bukkit.Axis
 import org.bukkit.Material
+import org.bukkit.Sound
+import org.bukkit.SoundCategory
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.data.BlockData
+import org.bukkit.block.data.Orientable
 
 
 /**
@@ -33,32 +35,33 @@ fun Block.getEnd(face: BlockFace, checkAdjacent: Material? = null, adjacentDirec
 }
 
 /**
- * A class which marks the bounds of a nether portal of other similar structure. It represents the inside of the portal (e.i. not the obsidian).
+ * A class which marks the bounds of a nether portal. It represents the inside of the portal (e.i. not the obsidian).
  *
  */
-data class Bounds(
+data class NetherPortal(
     val corner1: Block,
     val corner2: Block,
     val axis: Axis
 ) {
+
     /**
-     * Simply fills the bounds with the given material.
-     *
-     * @param material The material to fill the blocks with.
-     * @param blockDataFunction A function to determine the block data of each block it fills.
+     * Simply fills the portal.
      *
      */
-    fun attemptFill(material: Material, blockDataFunction: (BlockData) -> BlockData = {it}) {
+    fun attemptFill() {
         val result = corner1.loopBlocksWhile(corner2) {
             it.type.isEmpty || it.type == Material.FIRE
         }
         if (!result) return
         corner1.loopBlocksWhile(corner2) {
-            it.type = material
-            it.blockData = blockDataFunction(it.blockData)
+            it.type = Material.NETHER_PORTAL
+            val data = it.blockData as Orientable
+            data.axis = axis
+            it.blockData = data
             true
         }
     }
+
 }
 
 val portalMaterial = Material.OBSIDIAN
@@ -75,16 +78,15 @@ val cardinals = mapOf(
  * @return The bounds if the portal is built correctly, or null if there was any sort of unexpected shape in the portal frame or inside.
  *
  */
-fun Block.attemptFindNetherPortal(): Bounds? {
+fun Block.attemptFindNetherPortal(): NetherPortal? {
 
-    val floor = getEnd(BlockFace.DOWN)?.getRelative(BlockFace.UP) ?: return null
+    val bottom = getEnd(BlockFace.DOWN) ?: return null
+    val floor = bottom.getRelative(BlockFace.DOWN)
     if (floor.type != portalMaterial) return null
-    cardinals
+    return cardinals
         .filter { (face, _) -> floor.getRelative(face).type == portalMaterial }
-        .forEach { (face, axis) ->
-            return netherPortalBounds(face, axis)
-        }
-    return null
+        .mapNotNull { (face, axis) -> bottom.netherPortalBounds(face, axis) }
+        .firstOrNull()
 
 }
 
@@ -97,7 +99,7 @@ fun Block.attemptFindNetherPortal(): Bounds? {
  * @return The bounds of the portal if found, or null if there was a hole in the portal frame.
  *
  */
-fun Block.netherPortalBounds(face: BlockFace, axis: Axis): Bounds? {
+fun Block.netherPortalBounds(face: BlockFace, axis: Axis): NetherPortal? {
 
     val opposite = face.oppositeFace
 
@@ -110,7 +112,7 @@ fun Block.netherPortalBounds(face: BlockFace, axis: Axis): Bounds? {
     getEnd(opposite, portalMaterial, BlockFace.DOWN) ?: return null
     topRight.getEnd(BlockFace.DOWN, portalMaterial, opposite) ?: return null
 
-    return Bounds(bottomLeft, topRight, axis)
+    return NetherPortal(bottomLeft, topRight, axis)
 
 }
 
@@ -141,9 +143,17 @@ fun Block.loopBlocksWhile(block: Block, function: (Block) -> Boolean): Boolean {
  */
 private infix fun Int.loopTo(other: Int): IntRange {
 
-    if (other >= this) return this..other
-    if (this > other) return other..this
-
-    return this..this
+    return if (other >= this) this..other
+    else other..this
 
 }
+
+/**
+ * Utility function to play sounds at blocks
+ *
+ * @param sound The sound to play
+ * @param category The sound category to use
+ *
+ */
+fun Block.playSound(sound: Sound, category: SoundCategory = SoundCategory.MASTER)
+    = world.playSound(location, sound, category, 1f, 1f)
