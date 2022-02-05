@@ -44,7 +44,7 @@ object BlockInteractListener : Listener {
         // Remove durability
         val copy = hand.clone()
         val meta = copy.itemMeta as Damageable
-        meta.damage -= 1
+        meta.damage += 1 // Adding damage causes the durability to go down
         copy.itemMeta = meta
 
         // Set item in player's hand to the copy
