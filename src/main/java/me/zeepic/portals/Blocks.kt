@@ -7,6 +7,7 @@ import org.bukkit.SoundCategory
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Orientable
+import kotlin.math.abs
 
 
 /**
@@ -35,7 +36,7 @@ fun Block.getEnd(face: BlockFace, checkAdjacent: Material? = null, adjacentDirec
 }
 
 /**
- * A class which marks the bounds of a nether portal. It represents the inside of the portal (e.i. not the obsidian).
+ * A class which marks the bounds of a nether portal. It represents the inside of the portal (i.e. not the obsidian).
  *
  */
 data class NetherPortal(
@@ -47,12 +48,15 @@ data class NetherPortal(
     /**
      * Simply fills the portal.
      *
+     * @return True if the nether portal was filled successfully.
+     *
      */
-    fun attemptFill() {
+    fun attemptFill(): Boolean {
+        if ((abs(corner1.x - corner2.x) < 1 && abs(corner1.z - corner2.z) < 1) || abs(corner1.y - corner2.y) < 2) return false
         val result = corner1.loopBlocksWhile(corner2) {
             it.type.isEmpty || it.type == Material.FIRE
         }
-        if (!result) return
+        if (!result) return false
         corner1.loopBlocksWhile(corner2) {
             it.type = Material.NETHER_PORTAL
             val data = it.blockData as Orientable
@@ -60,6 +64,7 @@ data class NetherPortal(
             it.blockData = data
             true
         }
+        return true
     }
 
 }
